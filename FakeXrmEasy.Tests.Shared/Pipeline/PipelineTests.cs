@@ -393,7 +393,7 @@ namespace FakeXrmEasy.Tests
         }
 
         [Fact]
-        public void Hans()
+        public void AddPreImageAndAssertInfluenceOnIntermediateRetrieve()
         {
             var context = new XrmFakedContext();
             context.UsePipelineSimulation = true;
