@@ -41,7 +41,7 @@ namespace FakeXrmEasy
         /// <param name="rank">The order in which this plugin should be executed in comparison to other plugins registered with the same <paramref name="message"/> and <paramref name="stage"/>.</param>
         /// <param name="filteringAttributes">When not one of these attributes is present in the execution context, the execution of the plugin is prevented.</param>
         /// <param name="primaryEntityTypeCode">The entity type code to filter this step for.</param>
-        public void RegisterPluginStep<TPlugin>(string message, ProcessingStepStage stage = ProcessingStepStage.Postoperation, ProcessingStepMode mode = ProcessingStepMode.Synchronous, int rank = 1, string[] filteringAttributes = null, int? primaryEntityTypeCode = null)
+        public void RegisterPluginStep<TPlugin>(string message, ProcessingStepStage stage = ProcessingStepStage.Postoperation, ProcessingStepMode mode = ProcessingStepMode.Synchronous, int rank = 1, string[] filteringAttributes = null, int? primaryEntityTypeCode = null, IEnumerable<Entity> preEntityImages = null, IEnumerable<Entity> postEntityImages = null)
             where TPlugin : IPlugin
         {
             // Message
@@ -101,6 +101,18 @@ namespace FakeXrmEasy
                 ["rank"] = rank
             };
             this.AddEntityWithDefaults(sdkMessageProcessingStep);
+
+            foreach (var preImage in preEntityImages)
+            {
+                var sdkMessageProcessingStepImage = new Entity("sdkmessageprocessingstepimage")
+                {
+                    Id = Guid.NewGuid(),
+                    ["name"] = preImage.GetAttributeValue<string>("name"),
+                    ["attributes1"] = preImage.GetAttributeValue<string>("attributes"),
+                    ["sdkmessageprocessingstepid"] = sdkMessageProcessingStep.ToEntityReference(),
+                };
+                this.AddEntityWithDefaults(sdkMessageProcessingStepImage);
+            }
         }
 
         private void ExecutePipelineStage(string method, ProcessingStepStage stage, ProcessingStepMode mode, Entity entity)
@@ -127,6 +139,10 @@ namespace FakeXrmEasy
         {
             foreach (var plugin in plugins)
             {
+
+                var preImages = GetImagesForStep(plugin.Id, ProcessingStepImageType.PreImage);
+                //var postImages = GetImagesForStep(plugin.Id, ProcessingStepImageType.PostImage);
+
                 var pluginMethod = GetPluginMethod(plugin);
 
                 var pluginContext = this.GetDefaultPluginContext();
@@ -139,6 +155,16 @@ namespace FakeXrmEasy
                 };
                 pluginContext.OutputParameters = new ParameterCollection();
                 pluginContext.PreEntityImages = new EntityImageCollection();
+                if (target is Entity)
+                {
+                    foreach (var preImageDefinition in preImages)
+                    {
+                        var targetEntity = (Entity)target;
+                        var preImage = this.Service.Retrieve(targetEntity.LogicalName, targetEntity.Id, new ColumnSet(preImageDefinition.GetAttributeValue<string>("attributes1").Split(',')));
+                        pluginContext.PreEntityImages.Add(preImageDefinition.GetAttributeValue<string>("name"), preImage);
+                    }
+                }
+
                 pluginContext.PostEntityImages = new EntityImageCollection();
 
                 pluginMethod.Invoke(this, new object[] { pluginContext });
@@ -216,6 +242,23 @@ namespace FakeXrmEasy
             // Todo: Filter on attributes
 
             return plugins;
+        }
+
+        private IEnumerable<Entity> GetImagesForStep(Guid StepId, ProcessingStepImageType type)
+        {
+            var query = new QueryExpression("sdkmessageprocessingstepimage")
+            {
+                ColumnSet = new ColumnSet(true),
+                Criteria =
+                {
+                    Conditions =
+                    {
+                        new ConditionExpression("sdkmessageprocessingstepid", ConditionOperator.Equal, StepId.ToString()),
+                    }
+                },
+            };
+            var images = this.Service.RetrieveMultiple(query).Entities.AsEnumerable();
+            return images;
         }
     }
 }

@@ -392,5 +392,31 @@ namespace FakeXrmEasy.Tests
             Assert.Equal("Updated", updatedAccount.Name);
         }
 
+        [Fact]
+        public void Hans()
+        {
+            var context = new XrmFakedContext();
+            context.UsePipelineSimulation = true;
+            List<Entity> preImages = new List<Entity>();
+            SdkMessageProcessingStepImage preImage = new SdkMessageProcessingStepImage()
+            {
+                ImageType = new OptionSetValue((int)ProcessingStepImageType.PreImage),
+                Name = "PreImage"
+            };
+            preImage.Attributes1 = "numberofemployees";
+            preImages.Add(preImage);
+
+            context.RegisterPluginStep<PreUpdateAccountPlugin>("Update", ProcessingStepStage.Preoperation, ProcessingStepMode.Synchronous, 1, null, 1, preImages, null);
+
+            var orgService = context.GetOrganizationService();
+            Account initialAccount = new Account();
+            initialAccount.NumberOfEmployees = 1;
+            initialAccount.Id = orgService.Create(initialAccount);
+            orgService.Update(initialAccount);
+
+            var updatedAccount = orgService.Retrieve(initialAccount.LogicalName, initialAccount.Id, new ColumnSet(true)) as Account;
+            Assert.Equal(updatedAccount.NumberOfEmployees, 2);
+        }
+
     }
 }
