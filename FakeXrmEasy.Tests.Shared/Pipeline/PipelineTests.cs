@@ -412,7 +412,7 @@ namespace FakeXrmEasy.Tests
             Account initialAccount = new Account();
             initialAccount.NumberOfEmployees = 1;
             initialAccount.Id = orgService.Create(initialAccount);
-            orgService.Update(initialAccount);
+            orgService.Update(initialAccount); // plugin takes preimage and adds 1 to current nr of employees
 
             var updatedAccount = orgService.Retrieve(initialAccount.LogicalName, initialAccount.Id, new ColumnSet(true)) as Account;
             Assert.Equal(updatedAccount.NumberOfEmployees, 2);
