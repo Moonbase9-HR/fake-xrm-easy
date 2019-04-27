@@ -393,34 +393,7 @@ namespace FakeXrmEasy.Tests
         }
 
         [Fact]
-        public void AddPreImageAndAssertInfluenceOnIntermediateRetrieve()
-        {
-            var context = new XrmFakedContext();
-            context.UsePipelineSimulation = true;
-            List<Entity> preImages = new List<Entity>();
-            SdkMessageProcessingStepImage preImage = new SdkMessageProcessingStepImage()
-            {
-                ImageType = new OptionSetValue((int)ProcessingStepImageType.PreImage),
-                Name = "PreImage"
-            };
-
-            preImage.Attributes1 = "numberofemployees";
-            preImages.Add(preImage);
-
-            context.RegisterPluginStep<PreUpdateAccountPlugin>("Update", ProcessingStepStage.Preoperation, ProcessingStepMode.Synchronous, 1, null, 1, preImages, null);
-
-            var orgService = context.GetOrganizationService();
-            Account initialAccount = new Account();
-            initialAccount.NumberOfEmployees = 1;
-            initialAccount.Id = orgService.Create(initialAccount);
-            orgService.Update(initialAccount); // plugin takes preimage and adds 1 to current nr of employees
-
-            var updatedAccount = orgService.Retrieve(initialAccount.LogicalName, initialAccount.Id, new ColumnSet(true)) as Account;
-            Assert.Equal(updatedAccount.NumberOfEmployees, 2);
-        }
-
-        [Fact]
-        public void AddPreAndPostImageAndAssertComparison()
+        public void AddPreAndPostImageAndAssert()
         {
             var context = new XrmFakedContext();
             context.UsePipelineSimulation = true;
@@ -442,18 +415,26 @@ namespace FakeXrmEasy.Tests
             postImage.Attributes1 = "numberofemployees";
             postImages.Add(postImage);
 
-            context.RegisterPluginStep<PreUpdateAccountPlugin>("Update", ProcessingStepStage.Preoperation, ProcessingStepMode.Synchronous, 1, null, 1, preImages, postImages);
+            context.RegisterPluginStep<TraceImagesPlugin>("Update", ProcessingStepStage.Preoperation, ProcessingStepMode.Synchronous, 1, null, 1, preImages, postImages);
 
             var orgService = context.GetOrganizationService();
+
+            // create account to load data for preimage
             Account initialAccount = new Account();
             initialAccount.NumberOfEmployees = 1;
             initialAccount.Id = orgService.Create(initialAccount);
+
+            // update account to load data for postimage
             initialAccount.NumberOfEmployees = 10;
+            orgService.Update(initialAccount); 
 
-            orgService.Update(initialAccount); // plugin takes preimage and adds 1 to current nr of employees
+            var dumptrace = context.GetFakeTracingService().DumpTrace();
 
-            var updatedAccount = orgService.Retrieve(initialAccount.LogicalName, initialAccount.Id, new ColumnSet(true)) as Account;
-            Assert.Equal(updatedAccount.NumberOfEmployees, 2);
+            Assert.Contains("PreImage Found: PreImage", dumptrace);
+            Assert.Contains("PreImage Attribute: numberofemployees:1", dumptrace);
+            Assert.Contains("PostImage Found: PostImage", dumptrace);
+            Assert.Contains("PostImage Attribute: numberofemployees:10", dumptrace);
+      
         }
 
     }

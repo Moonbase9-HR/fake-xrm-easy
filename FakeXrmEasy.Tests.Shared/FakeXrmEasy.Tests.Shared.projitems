@@ -118,7 +118,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Issues\TestCRMHandlingOfNullsAndMissingFields.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Pipeline\PipelineTests.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)PluginsForTesting\AccountSetTerritories.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)PluginsForTesting\PreUpdateAccountPlugin.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)PluginsForTesting\TraceImagesPlugin.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)PluginsForTesting\EntityImagesPlugin.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)PluginsForTesting\PostOperationUpdatePlugin.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)PluginsForTesting\ServiceEndpointNotificationPlugin.cs" />
