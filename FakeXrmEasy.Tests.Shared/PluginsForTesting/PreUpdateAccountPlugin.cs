@@ -7,7 +7,7 @@ namespace FakeXrmEasy.Tests.PluginsForTesting
     /// <summary>
     /// This plugin adds 1 employee to the current nr of employees
     /// </summary>
-    public class PreUpdateAccountPlugin : IPlugin
+    public class ImagesAccountPlugin : IPlugin
     {
         public void Execute(IServiceProvider serviceProvider)
         {

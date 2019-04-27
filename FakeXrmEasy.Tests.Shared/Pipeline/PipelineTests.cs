@@ -403,6 +403,7 @@ namespace FakeXrmEasy.Tests
                 ImageType = new OptionSetValue((int)ProcessingStepImageType.PreImage),
                 Name = "PreImage"
             };
+
             preImage.Attributes1 = "numberofemployees";
             preImages.Add(preImage);
 
@@ -412,6 +413,43 @@ namespace FakeXrmEasy.Tests
             Account initialAccount = new Account();
             initialAccount.NumberOfEmployees = 1;
             initialAccount.Id = orgService.Create(initialAccount);
+            orgService.Update(initialAccount); // plugin takes preimage and adds 1 to current nr of employees
+
+            var updatedAccount = orgService.Retrieve(initialAccount.LogicalName, initialAccount.Id, new ColumnSet(true)) as Account;
+            Assert.Equal(updatedAccount.NumberOfEmployees, 2);
+        }
+
+        [Fact]
+        public void AddPreAndPostImageAndAssertComparison()
+        {
+            var context = new XrmFakedContext();
+            context.UsePipelineSimulation = true;
+            List<Entity> preImages = new List<Entity>();
+            SdkMessageProcessingStepImage preImage = new SdkMessageProcessingStepImage()
+            {
+                ImageType = new OptionSetValue((int)ProcessingStepImageType.PreImage),
+                Name = "PreImage"
+            };
+            preImage.Attributes1 = "numberofemployees";
+            preImages.Add(preImage);
+
+            List<Entity> postImages = new List<Entity>();
+            SdkMessageProcessingStepImage postImage = new SdkMessageProcessingStepImage()
+            {
+                ImageType = new OptionSetValue((int)ProcessingStepImageType.PostImage),
+                Name = "PostImage"
+            };
+            postImage.Attributes1 = "numberofemployees";
+            postImages.Add(postImage);
+
+            context.RegisterPluginStep<PreUpdateAccountPlugin>("Update", ProcessingStepStage.Preoperation, ProcessingStepMode.Synchronous, 1, null, 1, preImages, postImages);
+
+            var orgService = context.GetOrganizationService();
+            Account initialAccount = new Account();
+            initialAccount.NumberOfEmployees = 1;
+            initialAccount.Id = orgService.Create(initialAccount);
+            initialAccount.NumberOfEmployees = 10;
+
             orgService.Update(initialAccount); // plugin takes preimage and adds 1 to current nr of employees
 
             var updatedAccount = orgService.Retrieve(initialAccount.LogicalName, initialAccount.Id, new ColumnSet(true)) as Account;

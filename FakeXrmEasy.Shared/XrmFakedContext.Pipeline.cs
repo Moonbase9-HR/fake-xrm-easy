@@ -102,13 +102,26 @@ namespace FakeXrmEasy
             };
             this.AddEntityWithDefaults(sdkMessageProcessingStep);
 
-            foreach (var preImage in preEntityImages)
+            foreach (var preImage in preEntityImages ?? Enumerable.Empty<Entity>())
             {
                 var sdkMessageProcessingStepImage = new Entity("sdkmessageprocessingstepimage")
                 {
                     Id = Guid.NewGuid(),
                     ["name"] = preImage.GetAttributeValue<string>("name"),
+                    ["imagetype"] = preImage.GetAttributeValue<OptionSetValue>("imagetype"),
                     ["attributes1"] = preImage.GetAttributeValue<string>("attributes"),
+                    ["sdkmessageprocessingstepid"] = sdkMessageProcessingStep.ToEntityReference(),
+                };
+                this.AddEntityWithDefaults(sdkMessageProcessingStepImage);
+            }
+            foreach (var postImage in postEntityImages ?? Enumerable.Empty<Entity>())
+            {
+                var sdkMessageProcessingStepImage = new Entity("sdkmessageprocessingstepimage")
+                {
+                    Id = Guid.NewGuid(),
+                    ["name"] = postImage.GetAttributeValue<string>("name"),
+                    ["imagetype"] = postImage.GetAttributeValue<OptionSetValue>("imagetype"),
+                    ["attributes1"] = postImage.GetAttributeValue<string>("attributes"),
                     ["sdkmessageprocessingstepid"] = sdkMessageProcessingStep.ToEntityReference(),
                 };
                 this.AddEntityWithDefaults(sdkMessageProcessingStepImage);
@@ -141,7 +154,7 @@ namespace FakeXrmEasy
             {
 
                 var preImages = GetImagesForStep(plugin.Id, ProcessingStepImageType.PreImage);
-                //var postImages = GetImagesForStep(plugin.Id, ProcessingStepImageType.PostImage);
+                var postImages = GetImagesForStep(plugin.Id, ProcessingStepImageType.PostImage);
 
                 var pluginMethod = GetPluginMethod(plugin);
 
@@ -155,18 +168,22 @@ namespace FakeXrmEasy
                 };
                 pluginContext.OutputParameters = new ParameterCollection();
                 pluginContext.PreEntityImages = new EntityImageCollection();
+                pluginContext.PostEntityImages = new EntityImageCollection();
                 if (target is Entity)
                 {
+                    var targetEntity = (Entity)target;
                     foreach (var preImageDefinition in preImages)
                     {
-                        var targetEntity = (Entity)target;
                         var preImage = this.Service.Retrieve(targetEntity.LogicalName, targetEntity.Id, new ColumnSet(preImageDefinition.GetAttributeValue<string>("attributes1").Split(',')));
                         pluginContext.PreEntityImages.Add(preImageDefinition.GetAttributeValue<string>("name"), preImage);
                     }
+                    foreach(var postImageDefinition in postImages)
+                    {
+                        var postImage = this.Service.Retrieve(targetEntity.LogicalName, targetEntity.Id, new ColumnSet(postImageDefinition.GetAttributeValue<string>("attributes1").Split(',')));
+                        foreach (var attribute in targetEntity.Attributes) { postImage[attribute.Key] = attribute.Value; }
+                        pluginContext.PostEntityImages.Add(postImageDefinition.GetAttributeValue<string>("name"), postImage);
+                    }
                 }
-
-                pluginContext.PostEntityImages = new EntityImageCollection();
-
                 pluginMethod.Invoke(this, new object[] { pluginContext });
             }
         }
@@ -254,6 +271,7 @@ namespace FakeXrmEasy
                     Conditions =
                     {
                         new ConditionExpression("sdkmessageprocessingstepid", ConditionOperator.Equal, StepId.ToString()),
+                        new ConditionExpression("imagetype", ConditionOperator.Equal, (int)type),
                     }
                 },
             };
